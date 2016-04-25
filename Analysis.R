@@ -1,89 +1,56 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+unzip("activity.zip", exdir = "data/", overwrite = TRUE)
 
 
-## Loading and preprocessing the data
-
-Below code reads the data that is extracted into data folder and recreates "activityEdited" object after remobing missing values.
-
-```{r, echo=TRUE}
 activity <- read.csv("data/activity.csv")
+head(activity)
+
 naLogical <- !is.na(activity$steps)
 activityEdited <- activity[naLogical,]
-```
 
+sum(is.na(activity$steps))
 
-## What is mean total number of steps taken per day?
-
-Below code stores the steps taken per day in "activityByDay" object and creates a histogram.
-
-```{r, results='asis'}
 activityByDay <- aggregate(activityEdited$steps,list(activityEdited$date), sum)
 names(activityByDay) <- c("Date", "Total Steps")
 
 hist(activityByDay$`Total Steps`, main="Total number of steps taken each day")
-```
-```{r, echo=TRUE}
+
 summary(activityByDay$`Total Steps`)
-```
 
-
-
-The summary command above shows that the median of total number of steps taken each day is 10760 and the mean is 10770.
-
-## What is the average daily activity pattern?
-
-Below code and graph shows the average daily activity pattern.
-
-```{r, results='asis'}
 activityByInterval <- aggregate(activityEdited$steps, list(activityEdited$interval), mean)
+head(activityByInterval)
 names(activityByInterval) <- c("Interval", "Avg. Steps")
 
 plot(activityByInterval$Interval,activityByInterval$`Avg. Steps`,type = "l",xlab="Interval",ylab="Avg. Steps Taken")
 title(main = "Average Steps by interval")
 
-```
-```{r, echo=TRUE}
 which.max(activityByInterval$`Avg. Steps`)
-
 activityByInterval[104,]
-```
 
-Max. average steps in in the interval 835
+activityByInterval[activityByInterval$`Avg. Steps` == 206.000,]
 
-## Imputing missing values
+activityByDayAvg <- aggregate(activityEdited$steps,list(activityEdited$date), mean)
+names(activityByDayAvg) <- c("Date", "Mean Steps")
 
-One way of inputting missing values is by including interval level average in that interval. The interval level values are present in activityByInterval and the same values are used below to merge into new activity set.
+head(activityByDayAvg)
 
-```{r, echo=TRUE}
 activityMerged <- merge(activity,activityByInterval,by.x = "interval", by.y="Interval")
+head(activityMerged)
 
 activityMerged[is.na(activityMerged$steps),2] <- activityMerged[is.na(activityMerged$steps),4]
 
 newActivitySet <- activityMerged
 
+
 newActivityByDay <- aggregate(newActivitySet$steps,list(newActivitySet$date), sum)
 names(newActivityByDay) <- c("Date", "Total Steps")
-summary(newActivityByDay$`Total Steps`)
 
-```
-
-After inputting the missing values the median and mean are same and the value is 10770.
-
-```{r, results='asis'}
 hist(newActivityByDay$`Total Steps`)
 
-```
-## Are there differences in activity patterns between weekdays and weekends?
+summary(newActivityByDay$`Total Steps`)
 
-
-
-```{r, results='asis'}
 newActivitySet <- cbind(newActivitySet,weekdays(as.POSIXlt(newActivitySet$date)),"Weekend")
+
+head(newActivitySet)
 
 names(newActivitySet) <- c("Interval",  "Steps","Date","AvgSteps", "WeekDay","DayType")
 
@@ -93,17 +60,17 @@ newActivitySet[newActivitySet$WeekDay != "Sunday" & newActivitySet$WeekDay !="Sa
 
 newActivitySet$DayType <- as.factor(newActivitySet$DayType)
 
+ 
+
 newActivitySetByInterval <- aggregate(newActivitySet$Steps, list(newActivitySet$Interval, newActivitySet$DayType), mean)
+
+head(newActivitySetByInterval)
 
 names(newActivitySetByInterval)  <- c("Interval", "DayType", "Average")
 
 library(ggplot2)
 
+
 ggplot(newActivitySetByInterval, mapping = aes(Interval,Average, col = DayType,title='Average Steps by interval by day type')) +
   ylab("Average Steps") +
   geom_point(size=3)+ geom_smooth(method="lm") + facet_grid(facets = DayType~.)
-
-```
-
-
-The above graph shows the weekday and weekend have different trends during the day.
